@@ -5,75 +5,103 @@ const { check, validationResult } = require("express-validator")
 const Users = require("../models/User")
 const Posts = require("../models/Posts")
 const dateFormat = require('dateformat');
+const path = require("path")
 const postForm = (req, res) => {
     res.render('createPost', { title: 'Create new post', login: true, errors: [], input_title: '', body: '' })
 }
 
-const storePost = (req, res) => {
 
-    const form = formidable();
-    form.parse(req, (err, fields, files) => {
-        const errors = []
+
+const storePost = (req, res) => {
+    const form = new formidable.IncomingForm({
+        uploadDir: path.join(__dirname, '../views', 'assets', 'img', 'temp'),
+        keepExtensions: true, // Keep file extensions
+    });
+
+    form.parse(req, async (err, fields, files) => {
+        if (err) {
+            console.error('Form parsing error:', err);
+            return res.status(500).send('Error while parsing form data.');
+        }
+
         const { title, body } = fields;
-        if (title.length === 0) {
-            errors.push({ msg: 'Title is required' })
+        const imageFile = files.image; // Get the uploaded image file
+
+        const errors = [];
+
+        // Validate title and body
+        if (!title) {
+            errors.push({ msg: 'Title is required' });
         }
-        if (body.length === 0) {
-            errors.push({ msg: 'Body is required' })
+        if (!body) {
+            errors.push({ msg: 'Body is required' });
         }
-        const imageName = files.image.name;
-        const split = imageName.split(".");
-        const imageExt = split[split.length - 1].toUpperCase();
-        if (files.image.name.length === 0) {
-            errors.push({ msg: 'Image is required' })
-        } else if (imageExt !== "JPG" && imageExt !== "PNG") {
-            errors.push({ msg: 'Only jpg and png are allowed' })
+
+        // Validate image
+        if (!imageFile || !imageFile.name) {
+            errors.push({ msg: 'Image is required' });
+        } else {
+            const imageExt = path.extname(imageFile.name).toUpperCase();
+            if (imageExt !== '.JPG' && imageExt !== '.PNG') {
+                errors.push({ msg: 'Only JPG and PNG images are allowed' });
+            }
         }
 
         if (errors.length !== 0) {
-            res.render("createPost", { title: 'Create new post', login: true, errors, input_title: title, body })
-        } else {
-            files.image.name = uuidv4() + "." + imageExt;
-            const oldPath = files.image.path
-            const newPath = __dirname + "/../views/assets/img/" + files.image.name;
-            fs.readFile(oldPath, (err, data) => {
-                if (!err) {
-                    fs.writeFile(newPath, data, (err) => {
-                        if (!err) {
-                            fs.unlink(oldPath, async (err) => {
-                                if (!err) {
-                                    const id = req.id;
-                                    try {
-                                        const user = await Users.findOne({ _id: id })
-                                        const name = user.name;
-                                        const newPost = new Posts({
-                                            userID: id,
-                                            title,
-                                            body,
-                                            image: files.image.name,
-                                            userName: name
-                                        })
-                                        try {
-                                            const result = await newPost.save();
-                                            if (result) {
-                                                req.flash('success', "Your post has been added successfully")
-                                                res.redirect('/posts/1')
-                                            }
-                                        } catch (err) {
-                                            res.send(err.msg)
-                                        }
-                                    } catch (err) {
-                                        res.send(err.msg);
-                                    }
-                                }
-                            })
-                        }
-                    })
-                }
-            })
+            return res.render("createPost", {
+                title: 'Create new post',
+                login: true,
+                errors,
+                input_title: title,
+                body
+            });
         }
-    })
+
+        try {
+            // Rename the uploaded image
+            const newImageName = uuidv4() + path.extname(imageFile.name);
+            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', newImageName);
+
+            fs.renameSync(imageFile.path, newImagePath);
+
+            // Assuming you have a user ID
+            const userId = req.id;
+
+            // Find the user
+            const user = await Users.findOne({ _id: userId });
+            if (!user) {
+                return res.status(404).send('User not found');
+            }
+
+            // Create a new post
+            const newPost = new Posts({
+                userID: userId,
+                title,
+                body,
+                image: newImageName,
+                userName: user.name
+            });
+
+            // Save the new post
+            try {
+                const result = await newPost.save();
+                if (result) {
+                    req.flash('success', "Your post has been added successfully");
+                    return res.redirect('/posts/1');
+                }
+            } catch (err) {
+                console.error('Post save error:', err);
+                return res.status(500).send('Error while saving post.');
+            }
+        } catch (err) {
+            console.error('Server error:', err);
+            return res.status(500).send('Internal server error.');
+        }
+    });
 }
+
+module.exports = storePost;
+
 
 const posts = async (req, res) => {
     const id = req.id;
