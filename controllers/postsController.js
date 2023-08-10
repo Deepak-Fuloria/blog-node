@@ -37,15 +37,7 @@ const storePost = (req, res) => {
             errors.push({ msg: 'Body is required' });
         }
 
-        // Validate image
-        // if (!imageFile || !imageFile.name) {
-        //     errors.push({ msg: 'Image is required' });
-        // } else {
-        //     const imageExt = path.extname(imageFile.name).toUpperCase();
-        //     if (imageExt !== '.JPG' && imageExt !== '.PNG') {
-        //         errors.push({ msg: 'Only JPG and PNG images are allowed' });
-        //     }
-        // }
+        
 
         if (errors.length !== 0) {
             return res.render("createPost", {
