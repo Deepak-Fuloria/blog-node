@@ -37,7 +37,7 @@ const storePost = (req, res) => {
             errors.push({ msg: 'Body is required' });
         }
 
-        
+
 
         if (errors.length !== 0) {
             return res.render("createPost", {
@@ -51,8 +51,13 @@ const storePost = (req, res) => {
 
         try {
             // Rename the uploaded image
-            const newImageName = uuidv4() + path.extname(imageFile.name);
-            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', newImageName);
+
+
+            // const newImageName = uuidv4() + path.extname(imageFile.name);
+
+
+
+            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', imageFile.name);
 
             fs.renameSync(imageFile.path, newImagePath);
 
@@ -70,7 +75,7 @@ const storePost = (req, res) => {
                 userID: userId,
                 title,
                 body,
-                image: newImageName,
+                image: imageFile.name,
                 userName: user.name
             });
 
