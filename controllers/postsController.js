@@ -26,15 +26,11 @@ const storePost = (req, res) => {
             console.error('Form parsing error:', err);
             return res.status(500).send('Error while processing form.');
         }
-        const { title, body } = fields;
-        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ body:", body[0])
-        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ title:", title[0])
-        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ fields:", fields)
 
+        const { title, body } = fields;
+        const fileName = uuidv4() + files.image[0].originalFilename
         var oldpath = files.image[0].filepath;
-        console.log("🚀 ~ file: postsController.js:31 ~ form.parse ~ oldpath:", oldpath)
-        const newpath = path.join(__dirname, '../views', 'assets', 'img', files.image[0].originalFilename);
-        console.log("🚀 ~ file: postsController.js:33 ~ form.parse ~ newpath:", newpath)
+        const newpath = path.join(__dirname, '../views', 'assets', 'img', fileName);
 
         fs.rename(oldpath, newpath, function (err) {
             if (err) {
@@ -58,12 +54,9 @@ const storePost = (req, res) => {
             userID: userId,
             title: title[0],
             body: body[0],
-            image: files.image[0].originalFilename,
+            image: fileName,
             userName: user.name
         });
-
-
-        console.log("reached here", newPost)
 
         // Save the new post
         try {
