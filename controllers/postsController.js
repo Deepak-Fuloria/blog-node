@@ -50,14 +50,13 @@ const storePost = (req, res) => {
         }
 
         try {
-            // Rename the uploaded image
 
 
-            // const newImageName = uuidv4() + path.extname(imageFile.name);
-
-
-
-            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', imageFile.name);
+            console.log("reached here", typeof imageFile.name)
+            console.log("reached here", imageFile.name)
+            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', '1.jpg');
+            console.log("reached here __dirname", __dirname)
+            console.log("reached here newImagePath", newImagePath)
 
             fs.renameSync(imageFile.path, newImagePath);
 
