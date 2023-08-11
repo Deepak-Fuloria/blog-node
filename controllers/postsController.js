@@ -1,4 +1,3 @@
-const formidable = require('formidable');
 const { v4: uuidv4 } = require('uuid');
 const fs = require("fs")
 const { check, validationResult } = require("express-validator")
@@ -6,6 +5,9 @@ const Users = require("../models/User")
 const Posts = require("../models/Posts")
 const dateFormat = require('dateformat');
 const path = require("path")
+const formidable = require('formidable');
+
+
 const postForm = (req, res) => {
     res.render('createPost', { title: 'Create new post', login: true, errors: [], input_title: '', body: '' })
 }
@@ -13,87 +15,149 @@ const postForm = (req, res) => {
 
 
 const storePost = (req, res) => {
+
     const form = new formidable.IncomingForm({
         uploadDir: path.join(__dirname, '../views', 'assets', 'img', 'temp'),
-        keepExtensions: true, // Keep file extensions
     });
+
 
     form.parse(req, async (err, fields, files) => {
         if (err) {
             console.error('Form parsing error:', err);
-            return res.status(500).send('Error while parsing form data.');
+            return res.status(500).send('Error while processing form.');
         }
-
         const { title, body } = fields;
-        const imageFile = files.image; // Get the uploaded image file
+        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ body:", body[0])
+        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ title:", title[0])
+        console.log("🚀 ~ file: postsController.js:30 ~ form.parse ~ fields:", fields)
 
-        const errors = [];
+        var oldpath = files.image[0].filepath;
+        console.log("🚀 ~ file: postsController.js:31 ~ form.parse ~ oldpath:", oldpath)
+        const newpath = path.join(__dirname, '../views', 'assets', 'img', files.image[0].originalFilename);
+        console.log("🚀 ~ file: postsController.js:33 ~ form.parse ~ newpath:", newpath)
 
-        // Validate title and body
-        if (!title) {
-            errors.push({ msg: 'Title is required' });
-        }
-        if (!body) {
-            errors.push({ msg: 'Body is required' });
-        }
-
-
-
-        if (errors.length !== 0) {
-            return res.render("createPost", {
-                title: 'Create new post',
-                login: true,
-                errors,
-                input_title: title,
-                body
-            });
-        }
-
-        try {
-
-
-            console.log("reached here", typeof imageFile.name)
-            console.log("reached here", imageFile.name)
-            const newImagePath = path.join(__dirname, '../views', 'assets', 'img', '1.jpg');
-            console.log("reached here __dirname", __dirname)
-            console.log("reached here newImagePath", newImagePath)
-
-            fs.renameSync(imageFile.path, newImagePath);
-
-            // Assuming you have a user ID
-            const userId = req.id;
-
-            // Find the user
-            const user = await Users.findOne({ _id: userId });
-            if (!user) {
-                return res.status(404).send('User not found');
+        fs.rename(oldpath, newpath, function (err) {
+            if (err) {
+                console.error('File rename error:', err);
+                return res.status(500).send('Error while renaming file.');
             }
+        });
 
-            // Create a new post
-            const newPost = new Posts({
-                userID: userId,
-                title,
-                body,
-                image: imageFile.name,
-                userName: user.name
-            });
 
-            // Save the new post
-            try {
-                const result = await newPost.save();
-                if (result) {
-                    req.flash('success', "Your post has been added successfully");
-                    return res.redirect('/posts/1');
-                }
-            } catch (err) {
-                console.error('Post save error:', err);
-                return res.status(500).send('Error while saving post.');
+        // ---------saving code
+        const userId = req.id;
+
+        // Find the user
+        const user = await Users.findOne({ _id: userId });
+        if (!user) {
+            return res.status(404).send('User not found');
+        }
+
+        // Create a new post
+        const newPost = new Posts({
+            userID: userId,
+            title: title[0],
+            body: body[0],
+            image: files.image[0].originalFilename,
+            userName: user.name
+        });
+
+
+        console.log("reached here", newPost)
+
+        // Save the new post
+        try {
+            const result = await newPost.save();
+            if (result) {
+                req.flash('success', "Your post has been added successfully");
+                return res.redirect('/posts/1');
             }
         } catch (err) {
-            console.error('Server error:', err);
-            return res.status(500).send('Internal server error.');
+            console.error('Post save error:', err);
+            return res.status(500).send('Error while saving post.');
         }
+
+
     });
+
+
+
+    // form.parse(req, async (err, fields, files) => {
+    //     if (err) {
+    //         console.error('Form parsing error:', err);
+    //         return res.status(500).send('Error while parsing form data.');
+    //     }
+
+    //     const { title, body } = fields;
+    //     const imageFile = files.image; // Get the uploaded image file
+
+    //     const errors = [];
+
+    //     // Validate title and body
+    //     if (!title) {
+    //         errors.push({ msg: 'Title is required' });
+    //     }
+    //     if (!body) {
+    //         errors.push({ msg: 'Body is required' });
+    //     }
+
+
+
+    //     if (errors.length !== 0) {
+    //         return res.render("createPost", {
+    //             title: 'Create new post',
+    //             login: true,
+    //             errors,
+    //             input_title: title,
+    //             body
+    //         });
+    //     }
+
+    //     try {
+
+
+    //         console.log("reached here", typeof imageFile.name)
+    //         console.log("reached here", imageFile.name)
+    //         const newImagePath = path.join(__dirname, '../views', 'assets', 'img', '1.jpg');
+    //         console.log("reached here __dirname", __dirname)
+    //         console.log("reached here newImagePath", newImagePath)
+
+    //         fs.renameSync(imageFile.path, newImagePath);
+
+    //         // Assuming you have a user ID
+    //         const userId = req.id;
+
+    //         // Find the user
+    //         const user = await Users.findOne({ _id: userId });
+    //         if (!user) {
+    //             return res.status(404).send('User not found');
+    //         }
+
+    //         // Create a new post
+    //         const newPost = new Posts({
+    //             userID: userId,
+    //             title,
+    //             body,
+    //             image: imageFile.name,
+    //             userName: user.name
+    //         });
+
+    //         // Save the new post
+    //         try {
+    //             const result = await newPost.save();
+    //             if (result) {
+    //                 req.flash('success', "Your post has been added successfully");
+    //                 return res.redirect('/posts/1');
+    //             }
+    //         } catch (err) {
+    //             console.error('Post save error:', err);
+    //             return res.status(500).send('Error while saving post.');
+    //         }
+    //     } catch (err) {
+    //         console.error('Server error:', err);
+    //         return res.status(500).send('Internal server error.');
+    //     }
+    // });
 }
 
 module.exports = storePost;
